@@ -21,8 +21,10 @@ def annotate(operation):
 
     input_text = request.data.decode('utf-8')
 
+    if len(input_text) < 30:
+        return build_error('Input is not long to parse. It must be at least 30 characters', 400)
+
     result = TextAnalyzer(str(input_text))
-    content = None
 
     if operation == "NER":
         content = jsonify(result.NER())
