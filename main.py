@@ -35,8 +35,7 @@ def annotate(operation):
                 "POS": result.pos_tag()
             }))
     else:
-        content = 'Invalid operation: %s' % operation
-        return content, 400
+        return build_error('Invalid operation: %s' % operation, 400)
 
     return content, 200
 
@@ -51,6 +50,12 @@ def database_info():
 
     return jsonify(mongo_client.server_info())
 
+
+def build_error(message, code = 400) :
+    return jsonify(dict ({
+        "message": message,
+        "code": code
+    })), code
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
