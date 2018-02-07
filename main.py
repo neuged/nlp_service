@@ -10,13 +10,11 @@ app.debug = True
 KNOWN_OPERATIONS = ["NER", "POS"]
 
 
-
 @app.route('/')
 def index():
     app.logger.debug('Hello world! Says the debug logger...')
 
     return 'Hello Wolfgang!'
-
 
 
 @app.route('/annotate/<operation>', methods=['POST'])
@@ -27,14 +25,13 @@ def annotate(operation):
     if len(input_text) < 30:
         return _build_error('Input is not long enough to parse. It must be at least 30 characters', 400)
     app.logger.debug(request.args)
-    textAnalyzer = TextAnalyzer(str(input_text))
+    text_analyzer = TextAnalyzer(str(input_text))
 
     content = dict({})
-    _configure_text_analyzer(request.args, textAnalyzer)
-    _run_operation(content, operation, textAnalyzer)
-    _add_metadata(content, textAnalyzer)
+    _configure_text_analyzer(request, text_analyzer)
+    _run_operation(content, operation, text_analyzer)
+    _add_metadata(content, text_analyzer)
     return jsonify(content), 200
-
 
 
 @app.route('/database_info')
@@ -47,10 +44,9 @@ def database_info():
     return jsonify(mongo_client.server_info())
 
 
-
 def _run_operation(content, operation, textAnalyzer):
 
-    if not operation in KNOWN_OPERATIONS:
+    if operation not in KNOWN_OPERATIONS:
         operation = "all"
 
     content["operation"] = operation
@@ -79,16 +75,16 @@ def _add_warning(content, message):
         content["warnings"] = []
 
 
-def _build_error(message, code = 400):
-    return jsonify(dict ({
+def _build_error(message, code=400):
+    return jsonify(dict({
         "message": message,
         "code": code
     })), code
 
 
-def _configure_text_analyzer(args, textAnalyzer):
-    if request.args["lang"] :
-        textAnalyzer.lang = request.args["lang"]
+def _configure_text_analyzer(request, text_analyzer):
+    if 'lang' in request.args:
+        text_analyzer.lang = request.args["lang"]
 
 
 if __name__ == '__main__':
