@@ -48,6 +48,25 @@ def list_languages():
     return jsonify(KNOWN_LANGUAGES)
 
 
+@app.route('/getEntities/<entity_type>', methods=['POST'])
+def get_entities(entity_type):
+    try:
+        text_analyzer = _create_text_analyzer(request)
+        content = dict({})
+        _configure_text_analyzer(request, text_analyzer)
+        _get_entities_from_text(content, entity_type, text_analyzer)
+        _add_metadata(content, text_analyzer)
+        return jsonify(content)
+    except ServiceError as error:
+        return error.build()
+
+
+def _get_entities_from_text(content, entity_type, text_analyzer):
+    list = text_analyzer.getEntities(text_analyzer.NER())
+    content["entities"] = [e._toJson() for e in list]
+
+
+
 def _create_text_analyzer(request):
     request.get_data()
     input_text = request.data.decode('utf-8')
