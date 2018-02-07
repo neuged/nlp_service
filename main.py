@@ -27,17 +27,25 @@ def annotate(operation):
     result = TextAnalyzer(str(input_text))
 
     if operation == "NER":
-        content = jsonify(result.NER())
+        ner = jsonify(result.NER())
     elif operation == "POS":
-        content = jsonify(result.pos_tag())
+        pos = jsonify(result.pos_tag())
     elif operation == "ALL":
-        content = \
-            jsonify(dict ({
-                "NER": result.NER(),
-                "POS": result.pos_tag()
-            }))
+        ner = jsonify(result.NER())
+        pos = jsonify(result.pos_tag())
     else:
         return build_error('Invalid operation: %s' % operation, 400)
+
+    content = \
+        jsonify(dict({
+            "NER": ner,
+            "POS": pos,
+            "meta": dict({
+                "detected_language": result.lang,
+                "word_count": len(result.words),
+                "sentence_count": len(result.sentences)
+            })
+        }))
 
     return content, 200
 
