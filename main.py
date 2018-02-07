@@ -27,27 +27,30 @@ def annotate(operation):
     result = TextAnalyzer(str(input_text))
 
     if operation == "NER":
-        ner = jsonify(result.NER())
+        content = dict({
+            "named_entites": result.NER()
+        })
     elif operation == "POS":
-        pos = jsonify(result.pos_tag())
+        content = dict({
+            "part_of_speech_tags": result.pos_tag()
+        })
     elif operation == "ALL":
-        ner = jsonify(result.NER())
-        pos = jsonify(result.pos_tag())
+        content = dict({
+            "part_of_speech_tags": result.pos_tag(),
+            "named_entites": result.NER()
+        })
     else:
         return build_error('Invalid operation: %s' % operation, 400)
 
-    content = \
-        jsonify(dict({
-            "NER": ner,
-            "POS": pos,
-            "meta": dict({
-                "detected_language": result.lang,
-                "word_count": len(result.words),
-                "sentence_count": len(result.sentences)
-            })
-        }))
+    meta = dict({
+        "detected_language": result.lang,
+        "word_count": len(result.words),
+        "sentence_count": len(result.sentences)
+    })
 
-    return content, 200
+    content["meta"] = meta
+
+    return jsonify(content), 200
 
 
 @app.route('/database_info')
