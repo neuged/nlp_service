@@ -24,28 +24,34 @@ def annotate(operation):
     if len(input_text) < 30:
         return build_error('Input is not long to parse. It must be at least 30 characters', 400)
 
-    result = TextAnalyzer(str(input_text))
+
+    app.logger.debug(request.args)
+
+    textAnalyzer = TextAnalyzer(str(input_text))
+
+    if request.args["lang"] :
+        textAnalyzer.lang = request.args["lang"]
 
     if operation == "NER":
         content = dict({
-            "named_entites": result.NER()
+            "named_entites": textAnalyzer.NER()
         })
     elif operation == "POS":
         content = dict({
-            "part_of_speech_tags": result.pos_tag()
+            "part_of_speech_tags": textAnalyzer.pos_tag()
         })
     elif operation == "ALL":
         content = dict({
-            "part_of_speech_tags": result.pos_tag(),
-            "named_entites": result.NER()
+            "part_of_speech_tags": textAnalyzer.pos_tag(),
+            "named_entites": textAnalyzer.NER()
         })
     else:
         return build_error('Invalid operation: %s' % operation, 400)
 
     meta = dict({
-        "detected_language": result.lang,
-        "word_count": len(result.words),
-        "sentence_count": len(result.sentences)
+        "detected_language": textAnalyzer.lang,
+        "word_count": len(textAnalyzer.words),
+        "sentence_count": len(textAnalyzer.sentences)
     })
 
     content["meta"] = meta
