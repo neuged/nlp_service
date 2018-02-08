@@ -11,12 +11,13 @@ app.debug = True
 
 KNOWN_OPERATIONS = ["NER", "POS"]
 KNOWN_LANGUAGES = ['de', 'en', 'it', 'fr']
-
+DEFAULT_PARAMS = {
+    "include_references": False
+}
 
 @app.route('/')
 def index():
     app.logger.debug('Hello world! Says the debug logger...')
-
     return 'Hello Wolfgang!'
 
 
@@ -25,9 +26,24 @@ def annotate(operation):
     try:
         text_analyzer = _create_text_analyzer(request)
         content = dict({})
-        _configure_text_analyzer(request, text_analyzer)
+        params = DEFAULT_PARAMS
+        _configure_text_analyzer(request, params, text_analyzer)
         _run_operation(content, operation, text_analyzer)
-        _add_metadata(content, text_analyzer)
+        _add_metadata(content, params, text_analyzer)
+        return jsonify(content)
+    except ServiceError as error:
+        return error.build()
+
+
+@app.route('/get-entities/<entity_type>', methods=['POST'])
+def get_entities(entity_type):
+    try:
+        text_analyzer = _create_text_analyzer(request)
+        content = dict({})
+        params = DEFAULT_PARAMS
+        _configure_text_analyzer(request, params, text_analyzer)
+        _get_entities_from_text(content, params, text_analyzer)
+        _add_metadata(content, params, text_analyzer)
         return jsonify(content)
     except ServiceError as error:
         return error.build()
@@ -48,21 +64,8 @@ def list_languages():
     return jsonify(KNOWN_LANGUAGES)
 
 
-@app.route('/get-entities/<entity_type>', methods=['POST'])
-def get_entities(entity_type):
-    try:
-        text_analyzer = _create_text_analyzer(request)
-        content = dict({})
-        _configure_text_analyzer(request, text_analyzer)
-        _get_entities_from_text(content, entity_type, text_analyzer)
-        _add_metadata(content, text_analyzer)
-        return jsonify(content)
-    except ServiceError as error:
-        return error.build()
-
-
-def _get_entities_from_text(content, entity_type, text_analyzer):
-    list = text_analyzer.getEntities(text_analyzer.NER())
+def _get_entities_from_text(content, params, text_analyzer):
+    list = text_analyzer.getEntities(text_analyzer.NER(), ["ORG"], params["include_references"])
     content["entities"] = [e._toJson() for e in list]
 
 
@@ -76,22 +79,17 @@ def _create_text_analyzer(request):
 
 
 def _run_operation(content, operation, textAnalyzer):
-
     if operation not in KNOWN_OPERATIONS:
         operation = "all"
-
     content["operation"] = operation
-
     if operation in ["NER", "all"]:
-        content["named_entites"] = textAnalyzer.NER()
-
+        content["named_entities"] = textAnalyzer.NER()
     if operation in ["POS", "all"]:
         content["part_of_speech_tags"] = textAnalyzer.pos_tag()
-
     return content
 
 
-def _add_metadata(content, textAnalyzer):
+def _add_metadata(content, params, textAnalyzer):
     content["meta"] = dict({
         "detected_language": textAnalyzer.lang,
         "word_count": len(textAnalyzer.words),
@@ -99,12 +97,14 @@ def _add_metadata(content, textAnalyzer):
     })
 
 
-def _configure_text_analyzer(request, text_analyzer):
+def _configure_text_analyzer(request, params, text_analyzer):
     if "lang" in request.args:
         if request.args["lang"] in KNOWN_LANGUAGES:
             text_analyzer.lang = request.args["lang"]
         else:
             raise ServiceError("language '%s' not supported." % request.args["lang"])
+    if "include-references" in request.args:
+        params["include_references"] = request.args["include-references"]
 
 
 if __name__ == '__main__':
