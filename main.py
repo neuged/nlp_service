@@ -33,7 +33,7 @@ def annotate(operation):
         return error.build()
 
 
-@app.route('/database_info')
+@app.route('/database-info')
 def database_info():
     credentials = os.environ['DB_ROOT_CREDENTIALS']
     host = os.environ['DB_HOST']
@@ -42,13 +42,13 @@ def database_info():
     return jsonify(mongo_client.server_info())
 
 
-@app.route('/listLanguages')
+@app.route('/list-languages')
 def list_languages():
     # @ TODO implement
     return jsonify(KNOWN_LANGUAGES)
 
 
-@app.route('/getEntities/<entity_type>', methods=['POST'])
+@app.route('/get-entities/<entity_type>', methods=['POST'])
 def get_entities(entity_type):
     try:
         text_analyzer = _create_text_analyzer(request)
@@ -64,7 +64,6 @@ def get_entities(entity_type):
 def _get_entities_from_text(content, entity_type, text_analyzer):
     list = text_analyzer.getEntities(text_analyzer.NER())
     content["entities"] = [e._toJson() for e in list]
-
 
 
 def _create_text_analyzer(request):
