@@ -15,6 +15,7 @@ DEFAULT_PARAMS = {
     "include_references": False
 }
 
+
 @app.route('/')
 def index():
     app.logger.debug('Hello world! Says the debug logger...')
@@ -41,6 +42,7 @@ def get_entities(entity_type):
         text_analyzer = _create_text_analyzer(request)
         content = dict({})
         params = DEFAULT_PARAMS
+        params["entity_type"] = entity_type
         _configure_text_analyzer(request, params, text_analyzer)
         _get_entities_from_text(content, params, text_analyzer)
         _add_metadata(content, params, text_analyzer)
@@ -65,8 +67,9 @@ def list_languages():
 
 
 def _get_entities_from_text(content, params, text_analyzer):
-    list = text_analyzer.getEntities(text_analyzer.NER(), ["ORG"], params["include_references"])
-    content["entities"] = [e._toJson() for e in list]
+    list = text_analyzer.get_entities(text_analyzer.do_ner(), ["ORG"], params["include_references"])
+    content["entities"] = [e.to_json() for e in list]
+    app.logger.debug(list[0].to_json())
 
 
 def _create_text_analyzer(request):
@@ -83,9 +86,9 @@ def _run_operation(content, operation, textAnalyzer):
         operation = "all"
     content["operation"] = operation
     if operation in ["NER", "all"]:
-        content["named_entities"] = textAnalyzer.NER()
+        content["named_entities"] = textAnalyzer.do_ner()
     if operation in ["POS", "all"]:
-        content["part_of_speech_tags"] = textAnalyzer.pos_tag()
+        content["part_of_speech_tags"] = textAnalyzer.do_pos_tag()
     return content
 
 
@@ -104,7 +107,7 @@ def _configure_text_analyzer(request, params, text_analyzer):
         else:
             raise ServiceError("language '%s' not supported." % request.args["lang"])
     if "include-references" in request.args:
-        params["include_references"] = request.args["include-references"]
+        params["include_references"] = request.args["include-references"] not in ["false", "False", "FALSE", "0", "Off", "off"]
 
 
 if __name__ == '__main__':
