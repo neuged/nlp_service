@@ -1,4 +1,5 @@
 import os
+import copy
 
 from classes.service_error import ServiceError
 
@@ -12,7 +13,7 @@ app.debug = True
 KNOWN_OPERATIONS = ["NER", "POS"]
 KNOWN_LANGUAGES = ['de', 'en', 'it', 'fr']
 DEFAULT_PARAMS = {
-    "include_references": False
+    "include_references": True
 }
 
 
@@ -27,9 +28,9 @@ def annotate(operation):
     try:
         text_analyzer = _create_text_analyzer(request)
         content = dict({})
-        params = DEFAULT_PARAMS
+        params = copy.copy(DEFAULT_PARAMS)
         params["operation"] = operation
-        _configure_text_analyzer(request, params, text_analyzer)
+        _set_up_params_and_text_analyzer(request, params, text_analyzer)
         _run_operation(content, params, text_analyzer)
         _add_metadata(content, params, text_analyzer)
         return jsonify(content)
@@ -37,14 +38,15 @@ def annotate(operation):
         return error.build()
 
 
+@app.route('/get-entities/', methods=['POST'], defaults={'entity_type': ""})
 @app.route('/get-entities/<entity_type>', methods=['POST'])
 def get_entities(entity_type):
     try:
         text_analyzer = _create_text_analyzer(request)
         content = dict({})
-        params = DEFAULT_PARAMS
+        params = copy.copy(DEFAULT_PARAMS)
         params["entity_type"] = entity_type
-        _configure_text_analyzer(request, params, text_analyzer)
+        _set_up_params_and_text_analyzer(request, params, text_analyzer)
         _get_entities_from_text(content, params, text_analyzer)
         _add_metadata(content, params, text_analyzer)
         return jsonify(content)
@@ -63,14 +65,13 @@ def database_info():
 
 @app.route('/list-languages')
 def list_languages():
-    # @ TODO implement
+    # @ TODO get drom TextAnalyzer
     return jsonify(KNOWN_LANGUAGES)
 
 
 def _get_entities_from_text(content, params, text_analyzer):
-    list = text_analyzer.get_entities(text_analyzer.do_ner(), ["ORG"], params["include_references"])
+    list = text_analyzer.get_entities(text_analyzer.do_ner(), params["entity_type"], params["include_references"])
     content["entities"] = [e.to_json() for e in list]
-    app.logger.debug(list[0].to_json())
 
 
 def _create_text_analyzer(request):
@@ -78,7 +79,6 @@ def _create_text_analyzer(request):
     input_text = request.data.decode('utf-8')
     if len(input_text) < 30:
         raise ServiceError('Input is not long enough to parse. It must be at least 30 characters', 400)
-    app.logger.debug(request.args)
     return TextAnalyzer(str(input_text))
 
 
@@ -102,7 +102,7 @@ def _add_metadata(content, params, textAnalyzer):
     })
 
 
-def _configure_text_analyzer(request, params, text_analyzer):
+def _set_up_params_and_text_analyzer(request, params, text_analyzer):
     if "lang" in request.args:
         if request.args["lang"] in KNOWN_LANGUAGES:
             text_analyzer.lang = request.args["lang"]
@@ -110,6 +110,13 @@ def _configure_text_analyzer(request, params, text_analyzer):
             raise ServiceError("language '%s' not supported." % request.args["lang"])
     if "include-references" in request.args:
         params["include_references"] = _parameter_to_boolean(request.args["include-references"], params["include_references"])
+    if "entity_type" in params:
+        if params["entity_type"] == "":
+            params["entity_type"] = []
+        elif params["entity_type"] not in text_analyzer.SUPPORTED_ENTITY_TYPES.keys():
+            raise ServiceError("entity type '%s' not supported!" % params["entity_type"])
+        else:
+            params["entity_type"] = [text_analyzer.SUPPORTED_ENTITY_TYPES[params["entity_type"]]]
 
 
 def _parameter_to_boolean(param, default_value):
