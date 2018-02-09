@@ -28,8 +28,9 @@ def annotate(operation):
         text_analyzer = _create_text_analyzer(request)
         content = dict({})
         params = DEFAULT_PARAMS
+        params["operation"] = operation
         _configure_text_analyzer(request, params, text_analyzer)
-        _run_operation(content, operation, text_analyzer)
+        _run_operation(content, params, text_analyzer)
         _add_metadata(content, params, text_analyzer)
         return jsonify(content)
     except ServiceError as error:
@@ -81,7 +82,8 @@ def _create_text_analyzer(request):
     return TextAnalyzer(str(input_text))
 
 
-def _run_operation(content, operation, textAnalyzer):
+def _run_operation(content, params, textAnalyzer):
+    operation = params["operation"]
     if operation not in KNOWN_OPERATIONS:
         operation = "all"
     content["operation"] = operation
