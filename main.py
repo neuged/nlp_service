@@ -109,8 +109,15 @@ def _configure_text_analyzer(request, params, text_analyzer):
         else:
             raise ServiceError("language '%s' not supported." % request.args["lang"])
     if "include-references" in request.args:
-        params["include_references"] = request.args["include-references"] not in ["false", "False", "FALSE", "0", "Off", "off"]
+        params["include_references"] = _parameter_to_boolean(request.args["include-references"], params["include_references"])
 
+
+def _parameter_to_boolean(param, default_value):
+    if param in ["false", "False", "FALSE", "0", "Off", "off", "OFF", "NO", "no", "No", 0, False]:
+        return False
+    if param in ["true", "True", "TRUE", "1", "On", "on", "ON", "YES", "yes", "Yes", 1, True]:
+        return True
+    return default_value
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
