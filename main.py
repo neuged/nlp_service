@@ -1,14 +1,26 @@
 import os
 import copy
+import time
+import random
 
 from classes.service_error import ServiceError
-
-from flask import Flask, jsonify, request
-from pymongo import MongoClient
 from idai_journals.publications import TextAnalyzer
+
+from flask import Flask, jsonify, request, url_for
+from celery import Celery
+
+broker_host = os.environ['BROKER_HOST']
+broker_user = os.environ['BROKER_USER']
+broker_password = os.environ['BROKER_PASSWORD']
 
 app = Flask(__name__)
 app.debug = True
+
+app.config['CELERY_BROKER_URL'] = 'amqp://' + broker_user + ':' + broker_password + '@' + broker_host + '/nlp_vhost'
+app.config['CELERY_RESULT_BACKEND'] = 'rpc://'
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 KNOWN_OPERATIONS = ["NER", "POS"]
 KNOWN_LANGUAGES = ['de', 'en', 'it', 'fr']
@@ -52,15 +64,6 @@ def get_entities(entity_type):
         return jsonify(content)
     except ServiceError as error:
         return error.build()
-
-
-@app.route('/database-info')
-def database_info():
-    credentials = os.environ['DB_ROOT_CREDENTIALS']
-    host = os.environ['DB_HOST']
-    mongo_client = MongoClient('mongodb://' + credentials + '@' + host)
-    app.logger.debug(mongo_client.server_info())
-    return jsonify(mongo_client.server_info())
 
 
 @app.route('/list-languages')
@@ -125,6 +128,69 @@ def _parameter_to_boolean(param, default_value):
     if param in ["true", "True", "TRUE", "1", "On", "on", "ON", "YES", "yes", "Yes", 1, True]:
         return True
     return default_value
+
+
+@celery.task(bind=True)
+def long_task(self):
+    """Background task that runs a long function with progress reports."""
+    verbs = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
+    adjectives = ['master', 'radiant', 'silent', 'harmonic', 'fast']
+    nouns = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
+
+    message = ''
+
+    total = random.randint(10, 50)
+    for i in range(total):
+        if not message or random.random() < 0.25:
+            message = '{0} {1} {2}...'.format(random.choice(verbs),
+                                              random.choice(adjectives),
+                                              random.choice(nouns))
+        self.update_state(state='PROGRESS',
+                          meta={'current': i, 'total': total, 'status': message})
+
+        time.sleep(1)
+
+    return {'current': 100, 'total': 100, 'status': 'Task completed!', 'result': 42}
+
+
+@app.route('/longtask', methods=['POST'])
+def longtask():
+    task = long_task.apply_async()
+    app.logger.debug(task.id)
+    return jsonify({}), 202, {'Location': url_for('taskstatus',
+                                                  task_id=task.id)}
+
+
+@app.route('/status/<task_id>')
+def taskstatus(task_id):
+    task = long_task.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        # job did not start yet
+        response = {
+            'state': task.state,
+            'current': 0,
+            'total': 1,
+            'status': 'Pending...'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'current': task.info.get('current', 0),
+            'total': task.info.get('total', 1),
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task.state,
+            'current': 1,
+            'total': 1,
+            'status': str(task.info),  # this is the exception raised
+        }
+    return jsonify(response)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

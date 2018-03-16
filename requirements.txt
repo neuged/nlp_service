@@ -1,4 +1,5 @@
 # pip3 dependencies
 
 Flask
-pymongo
+amqp
+celery
