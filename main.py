@@ -1,26 +1,13 @@
 import os
 import copy
-import time
-import random
-
 from classes.service_error import ServiceError
 from idai_journals.publications import TextAnalyzer
 
 from flask import Flask, jsonify, request, url_for
-from celery import Celery
+from celery_client import celery
 
-broker_host = os.environ['BROKER_HOST']
-broker_user = os.environ['BROKER_USER']
-broker_password = os.environ['BROKER_PASSWORD']
-
-app = Flask(__name__)
+app = Flask('nlp_service')
 app.debug = True
-
-app.config['CELERY_BROKER_URL'] = 'amqp://' + broker_user + ':' + broker_password + '@' + broker_host + '/nlp_vhost'
-app.config['CELERY_RESULT_BACKEND'] = 'rpc://'
-
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
 
 KNOWN_OPERATIONS = ["NER", "POS"]
 KNOWN_LANGUAGES = ['de', 'en', 'it', 'fr']
@@ -130,40 +117,16 @@ def _parameter_to_boolean(param, default_value):
     return default_value
 
 
-@celery.task(bind=True)
-def long_task(self):
-    """Background task that runs a long function with progress reports."""
-    verbs = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
-    adjectives = ['master', 'radiant', 'silent', 'harmonic', 'fast']
-    nouns = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
-
-    message = ''
-
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(random.choice(verbs),
-                                              random.choice(adjectives),
-                                              random.choice(nouns))
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total, 'status': message})
-
-        time.sleep(1)
-
-    return {'current': 100, 'total': 100, 'status': 'Task completed!', 'result': 42}
-
-
 @app.route('/longtask', methods=['POST'])
-def longtask():
-    task = long_task.apply_async()
+def long_task():
+    task = celery.send_task('long_task', args=[], kwargs={})
     app.logger.debug(task.id)
-    return jsonify({}), 202, {'Location': url_for('taskstatus',
-                                                  task_id=task.id)}
+    return jsonify({}), 202, {'Location': url_for('task_status', task_id=task.id)}
 
 
 @app.route('/status/<task_id>')
-def taskstatus(task_id):
-    task = long_task.AsyncResult(task_id)
+def task_status(task_id):
+    task = celery.AsyncResult(task_id)
     if task.state == 'PENDING':
         # job did not start yet
         response = {
