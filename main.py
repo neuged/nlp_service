@@ -22,6 +22,50 @@ def index():
     return 'Hello Wolfgang!'
 
 
+@app.route('/annotate_celery/<operation>', methods=['POST'])
+def annotate_celery(operation):
+    try:
+        request.get_data()
+        input_text = request.data.decode('utf-8')
+        params = _parse_request_params(request.args)
+        params['operation'] = _parse_annotation_operation(operation)
+        task = celery.send_task('annotate', args=[input_text, params], kwargs={})
+
+        return jsonify({}), 202, {'Location': url_for('task_status', task_id=task.id)}
+    except ServiceError as error:
+        return error.build()
+
+
+def _parse_request_params(request_params):
+    params = copy.copy(DEFAULT_PARAMS)
+    if "lang" in request_params:
+        if request.args["lang"] in KNOWN_LANGUAGES:
+            params['lang'] = request_params['lang']
+        else:
+            raise ServiceError("Language '%s' not supported." % request_params["lang"])
+
+    if "include-references" in request_params:
+        if request_params["include-references"] == "True":
+            params["include_references"] = True
+        elif request_params["include-references"] == "False":
+            params["include_references"] = False
+        else:
+            params = DEFAULT_PARAMS["include_references"]
+
+    return params
+
+
+def _parse_annotation_operation(requested_operation):
+
+    if requested_operation == 'all':
+        return KNOWN_OPERATIONS
+
+    if requested_operation in KNOWN_OPERATIONS:
+        return requested_operation
+    else:
+        raise ServiceError('Unknown operation: %s.' % requested_operation, 400)
+
+
 @app.route('/annotate/<operation>', methods=['POST'])
 def annotate(operation):
     try:
