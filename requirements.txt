@@ -1,4 +1,4 @@
 # pip3 dependencies
-Flask
 amqp
 celery
+Flask
