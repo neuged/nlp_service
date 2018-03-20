@@ -11,7 +11,8 @@ The Celery module needs a [RabbitMQ](https://www.rabbitmq.com/) as its message B
 ## Prerequisites
 
 The easiest way to develop and/or deploy the service is to use the 
-[nlp-service-docker](https://github.com/dainst/nlp-service-docker). Which will pull and setup everything automatically.
+[nlp-service-docker](https://github.com/dainst/nlp-service-docker), which will pull all dependencies and setup 
+everything automatically.
 
 If you do not want to use Docker, these are the current prerequisites:
 
@@ -22,8 +23,8 @@ If you do not want to use Docker, these are the current prerequisites:
 ## Installation
 
 Install the Python 3 dependencies as described in [worker/requirements](worker/requirements.txt) and 
-[service/requirements](service/requirements.txt). For example by running `pip3 worker/requirements` and 
-`pip3 worker/requirements.txt` from the root directory.
+[service/requirements](service/requirements.txt). For example by running `pip3 install worker/requirements` and 
+`pip3 install worker/requirements.txt` from the root directory.
 
 Celery needs to know how to connect to the RabbitMQ message broker and expects the following environment variables to 
 be set accordingly:
@@ -44,15 +45,14 @@ The Flask app is started with:
  
 `python3 main.py` from in the `service` directory.
 
+The Flask app should be accessible at [localhost:5000](http://localhost:5000).
+
 The worker(s) is started with:
 
-`watchmedo auto-restart --recursive --patterns="*.py" -- celery -A worker.celery_tasks worker --loglevel=info` if you 
-want to live-reload the worker when making changes to the worker scripts. 
+`watchmedo auto-restart --recursive --patterns="*.py" -- celery -A celery_tasks worker --loglevel=info` from the worker
+ directory. This will live-reload the worker when making changes to the worker scripts. 
 
-Otherwise just run 
-`celery -A worker.celery_tasks worker --loglevel=info`
-
-The Flask app should now be accessible at [localhost:5000](http://localhost:5000).
+If you do not want the live reload, just run `celery -A worker.celery_tasks worker --loglevel=info`
 
 ## REST API
 
