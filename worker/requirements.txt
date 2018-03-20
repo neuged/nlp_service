@@ -1,0 +1,4 @@
+# pip3 dependencies
+amqp
+celery
+watchdog
