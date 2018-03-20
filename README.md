@@ -56,4 +56,4 @@ The Flask app should now be accessible at [localhost:5000](http://localhost:5000
 
 ## REST API
 
-Todo
+See [API reference](API-REFERENCE.md).
