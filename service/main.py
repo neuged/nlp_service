@@ -81,14 +81,14 @@ def task_status(task_id):
     return jsonify(response)
 
 
-@app.route('/list_options/', methods=['GET'], defaults={'option': None})
-@app.route('/list_options/<option>', methods=['GET'])
-def list_options(option):
-    if option == 'annotation-operations':
+@app.route('/help/', methods=['GET'], defaults={'request_type': None})
+@app.route('/help/<request_type>', methods=['GET'])
+def list_options(request_type):
+    if request_type == 'annotation-operations':
         return jsonify(VALID_ANNOTATION_OPERATIONS)
-    elif option == 'languages':
+    elif request_type == 'languages':
         return jsonify(VALID_LANGUAGES)
-    elif option == 'entity-types':
+    elif request_type == 'entity-types':
         return jsonify(VALID_ENTITY_TYPES)
     else:
         return jsonify({
