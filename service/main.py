@@ -1,9 +1,11 @@
 from classes.service_error import ServiceError
 
 from flask import Flask, jsonify, request, url_for
+from flask_cors import CORS
 from celery_client import celery
 
 app = Flask('nlp_service')
+cors = CORS(app, resources={r"*": {"origins": "http://localhost*"}})
 app.debug = True
 
 VALID_ANNOTATION_OPERATIONS = ["NER", "POS"]

@@ -2,3 +2,4 @@
 amqp
 celery
 Flask
+flask-cors
