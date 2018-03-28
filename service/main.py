@@ -29,7 +29,7 @@ def annotate(operation):
         params['operation'] = _parse_annotation_operation(operation)
         task = celery.send_task('annotate', args=[input_text, params], kwargs={})
 
-        return jsonify('Accepted'),\
+        return jsonify({'status': 'Accepted', 'task': task.id}),\
             202, {'Location': url_for('task_status', task_id=task.id)}
 
     except ServiceError as error:
@@ -47,7 +47,7 @@ def get_entities(entity_type):
 
         task = celery.send_task('get_entities', args=[input_text, params], kwargs={})
 
-        return jsonify('Accepted'),\
+        return jsonify({'status': 'Accepted', 'task': task.id}),\
             202, {'Location': url_for('task_status', task_id=task.id)}
 
     except ServiceError as error:
