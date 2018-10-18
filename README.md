@@ -1,4 +1,4 @@
-# nlp_service
+# DEPRECATED: nlp_service
 
 This is a webservice exposing [nlp_components](https://github.com/dainst/nlp_components) functionality. 
 
