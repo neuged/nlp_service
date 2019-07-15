@@ -2,3 +2,5 @@
 amqp
 celery
 watchdog
+docopt
+pdflib
